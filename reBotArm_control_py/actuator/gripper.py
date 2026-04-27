@@ -61,7 +61,8 @@ def load_cfg(path: str) -> dict:
 class Gripper:
     """夹爪控制句柄，直接持有 motorbridge.Controller。"""
 
-    def __init__(self, cfg_path: Optional[str] = None) -> None:
+    def __init__(self, cfg_path: Optional[str] = None,
+                 controller: Optional[Controller] = None) -> None:
         if cfg_path is None:
             cfg_path = Path(__file__).parent.parent.parent / "config" / "gripper.yaml"
         cfg = load_cfg(str(cfg_path))
@@ -72,6 +73,8 @@ class Gripper:
         self._mit_kp = self._cfg.kp
         self._mit_kd = self._cfg.kd
 
+        # External Controller is owned by the caller and must not be closed here.
+        self._external_ctrl: Optional[Controller] = controller
         self._ctrl: Optional[Controller] = None
         self._mot = None
         self._setup_motor()
@@ -82,6 +85,8 @@ class Gripper:
         self._rate = 100.0
 
     def _make_controller(self) -> Controller:
+        if self._external_ctrl is not None:
+            return self._external_ctrl
         if self._channel.startswith("/dev/tty"):
             return Controller.from_dm_serial(self._channel, 921600)
         return Controller(self._channel)
@@ -384,7 +389,9 @@ class Gripper:
         self.stop_control_loop()
         self.disable()
         time.sleep(0.5)
-        if self._ctrl is not None:
+        # When an external Controller was injected, the caller owns its
+        # lifecycle — don't shut it down here.
+        if self._ctrl is not None and self._external_ctrl is None:
             self._ctrl.shutdown()
             self._ctrl.close()
             self._ctrl = None
