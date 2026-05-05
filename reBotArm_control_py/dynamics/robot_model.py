@@ -115,9 +115,12 @@ def set_gravity(
             set_gravity(model, (0, 0, -9.81))   # 地球重力
             set_gravity(model, (0, 0, -1.62))   # 月球重力
     """
-    if isinstance(gravity, (tuple, list)):
-        gravity = np.array(gravity, dtype=float)
-    model.gravity = pin.Motion(gravity)
+    gravity = np.asarray(gravity, dtype=float)
+    if gravity.shape != (3,):
+        raise ValueError(
+            f"gravity must be a length-3 vector, got shape {gravity.shape}"
+        )
+    model.gravity = pin.Motion(gravity, np.zeros(3))
 
 
 def get_gravity(model: pin.Model) -> np.ndarray:
@@ -130,7 +133,7 @@ def get_gravity(model: pin.Model) -> np.ndarray:
         shape=(3,) 的 ndarray，单位：m/s²。
     """
     g = model.gravity
-    return np.array([g.linear.x, g.linear.y, g.linear.z])
+    return np.asarray(g.linear, dtype=float).copy()
 
 
 # --------------------------------------------------------------------------- #
