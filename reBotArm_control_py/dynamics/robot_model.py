@@ -117,7 +117,7 @@ def set_gravity(
     """
     if isinstance(gravity, (tuple, list)):
         gravity = np.array(gravity, dtype=float)
-    model.gravity = pin.Motion(gravity)
+    model.gravity = pin.Motion(gravity, np.zeros(3))
 
 
 def get_gravity(model: pin.Model) -> np.ndarray:
