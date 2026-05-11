@@ -115,9 +115,13 @@ def set_gravity(
             set_gravity(model, (0, 0, -9.81))   # 地球重力
             set_gravity(model, (0, 0, -1.62))   # 月球重力
     """
-    if isinstance(gravity, (tuple, list)):
-        gravity = np.array(gravity, dtype=float)
-    model.gravity = pin.Motion(gravity)
+    # pin.Motion no longer accepts a bare 3-vector (pinocchio >= 3.x
+    # only exposes the 6-vector ctor and the (linear, angular) ctor).
+    # Construct via the (linear, angular) form with zero angular —
+    # gravity has no rotational component, so this is exact, not a
+    # workaround.
+    linear = np.asarray(gravity, dtype=float).reshape(3)
+    model.gravity = pin.Motion(linear, np.zeros(3, dtype=float))
 
 
 def get_gravity(model: pin.Model) -> np.ndarray:
@@ -129,8 +133,9 @@ def get_gravity(model: pin.Model) -> np.ndarray:
     返回:
         shape=(3,) 的 ndarray，单位：m/s²。
     """
-    g = model.gravity
-    return np.array([g.linear.x, g.linear.y, g.linear.z])
+    # pinocchio >= 3.x returns Motion.linear as a numpy ndarray, not a
+    # Vector3 with .x/.y/.z attributes. ``np.asarray`` covers both.
+    return np.asarray(model.gravity.linear, dtype=float).reshape(3).copy()
 
 
 # --------------------------------------------------------------------------- #
